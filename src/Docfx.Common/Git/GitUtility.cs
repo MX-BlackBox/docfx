@@ -34,6 +34,10 @@ public static partial class GitUtility
         if (EnvironmentContext.GitFeaturesDisabled)
             return null;
 
+        // Return null when file path `/obj/` to avoid generating invalid link.
+        if (filePath.Contains("/obj/") || filePath.Contains("\\obj\\"))
+            return null;
+
         var repo = GetRepoInfo(Path.GetDirectoryName(filePath));
         if (repo is null)
             return null;
@@ -168,7 +172,7 @@ public static partial class GitUtility
             foreach (var text in File.ReadAllLines(configPath))
             {
                 var line = text.Trim();
-                if (line.StartsWith("["))
+                if (line.StartsWith('['))
                 {
                     var remote = RemoteRegex().Replace(line, "$1");
                     key = remote != line ? remote : "";

@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.Json;
+using AwesomeAssertions;
+using AwesomeAssertions.Equivalency;
 using Docfx.Common;
 using Docfx.YamlSerialization;
-using FluentAssertions;
-using FluentAssertions.Equivalency;
 namespace docfx.Tests;
 
 public partial class YamlSerializationTest
@@ -15,7 +15,7 @@ public partial class YamlSerializationTest
     /// <summary>
     /// Helper method to validate serialize/deserialize results.
     /// </summary>
-    protected void ValidateYamlRoundTrip<T>(T model)
+    private static void ValidateYamlRoundTrip<T>(T model)
     {
         // Act
         using var writer = new StringWriter();
@@ -31,7 +31,7 @@ public partial class YamlSerializationTest
     /// <summary>
     /// Helper method to validate serialize/deserialize results.
     /// </summary>
-    protected void ValidateYamlJsonRoundTrip<T>(T model)
+    protected static void ValidateYamlJsonRoundTrip<T>(T model)
     {
         // 1. Serialize to JSON with YamlDotNet
         using var writer = new StringWriter();
@@ -55,7 +55,7 @@ public partial class YamlSerializationTest
         newtownsoftJsonModel.Should().BeEquivalentTo(systemTextJsonModel, customAssertionOptions);
     }
 
-    private static EquivalencyAssertionOptions<T> customAssertionOptions<T>(EquivalencyAssertionOptions<T> opt)
+    private static EquivalencyOptions<T> customAssertionOptions<T>(EquivalencyOptions<T> opt)
     {
         // By default. JsonElement is compared by reference because JsonElement don't override Equals.
         return opt.ComparingByMembers<JsonElement>()

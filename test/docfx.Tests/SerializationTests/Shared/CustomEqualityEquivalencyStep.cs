@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using FluentAssertions.Equivalency;
+using AwesomeAssertions.Equivalency;
 using Newtonsoft.Json.Linq;
 
 #nullable enable
@@ -13,7 +13,7 @@ internal class CustomEqualityEquivalencyStep : IEquivalencyStep
     public EquivalencyResult Handle(
         Comparands comparands,
         IEquivalencyValidationContext context,
-        IEquivalencyValidator nestedValidator)
+        IValidateChildNodeEquivalency nestedValidator)
     {
         if (comparands.Subject is null || comparands.Expectation is null)
             return EquivalencyResult.ContinueWithNext;

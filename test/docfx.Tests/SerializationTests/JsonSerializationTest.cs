@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text.Json;
+using AwesomeAssertions;
+using AwesomeAssertions.Equivalency;
 using Docfx.Common;
-using FluentAssertions;
-using FluentAssertions.Equivalency;
 
 namespace docfx.Tests;
 
@@ -13,7 +13,7 @@ public partial class JsonSerializationTest
     /// <summary>
     /// Helper method to validate serialize/deserialize results.
     /// </summary>
-    protected void ValidateJsonRoundTrip<T>(T model)
+    private static void ValidateJsonRoundTrip<T>(T model)
     {
         // 1. Validate serialized result.
         var newtonsoftJson = NewtonsoftJsonUtility.Serialize(model);
@@ -33,7 +33,7 @@ public partial class JsonSerializationTest
         result.Should().BeEquivalentTo(model, customAssertionOptions);
     }
 
-    private static EquivalencyAssertionOptions<T> customAssertionOptions<T>(EquivalencyAssertionOptions<T> opt)
+    private static EquivalencyOptions<T> customAssertionOptions<T>(EquivalencyOptions<T> opt)
     {
         // By default. JsonElement is compared by reference because JsonElement don't override Equals.
         return opt.ComparingByMembers<JsonElement>()

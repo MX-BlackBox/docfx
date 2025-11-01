@@ -1,7 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-
+using System.Reflection.PortableExecutable;
 using Docfx.Common;
 using Docfx.Exceptions;
 using ICSharpCode.Decompiler.Metadata;
@@ -103,7 +103,7 @@ internal static class CompilationHelper
             references: GetDefaultMetadataReferences("VB").Concat(references ?? []));
     }
 
-    public static (Compilation, IAssemblySymbol) CreateCompilationFromAssembly(string assemblyPath, bool includePrivateMembers = false, params MetadataReference[] references)
+    public static (Compilation, IAssemblySymbol) CreateCompilationFromAssembly(string assemblyPath, PEReader? peReader = null, bool includePrivateMembers = false, params MetadataReference[] references)
     {
         var metadataReference = CreateMetadataReference(assemblyPath);
         var compilation = CS.CSharpCompilation.Create(
@@ -115,7 +115,7 @@ internal static class CompilationHelper
                     : MetadataImportOptions.Public
             ),
             syntaxTrees: s_assemblyBootstrap,
-            references: GetReferenceAssemblies(assemblyPath)
+            references: GetReferenceAssemblies(assemblyPath, peReader, references)
                 .Select(CreateMetadataReference)
                 .Concat(references ?? [])
                 .Append(metadataReference));
@@ -164,11 +164,14 @@ internal static class CompilationHelper
         }
     }
 
-    private static IEnumerable<string> GetReferenceAssemblies(string assemblyPath)
+    private static IEnumerable<string> GetReferenceAssemblies(string assemblyPath, PEReader? peReader, MetadataReference[] references)
     {
-        using var assembly = new PEFile(assemblyPath);
+        using var assembly = peReader == null
+            ? new PEFile(assemblyPath)
+            : new PEFile(assemblyPath, peReader);
         var assemblyResolver = new UniversalAssemblyResolver(assemblyPath, false, assembly.DetectTargetFrameworkId());
         var result = new Dictionary<string, string>();
+        Dictionary<string, string>? referenceFiles = default;
 
         GetReferenceAssembliesCore(assembly);
 
@@ -179,20 +182,36 @@ internal static class CompilationHelper
                 var file = assemblyResolver.FindAssemblyFile(reference);
                 if (file is null)
                 {
-                    // Skip warning for some weired assembly references: https://github.com/dotnet/docfx/issues/9459
-                    if (reference.Version?.ToString() != "0.0.0.0")
+                    if (referenceFiles == null)
                     {
-                        Logger.LogWarning($"Unable to resolve assembly reference {reference}", code: "InvalidAssemblyReference");
+                        referenceFiles = new();
+                        foreach (var referenceFile in references.OfType<PortableExecutableReference>())
+                        {
+                            var name = Path.GetFileNameWithoutExtension(referenceFile.FilePath);
+                            if (!string.IsNullOrEmpty(name)
+                                && !referenceFiles.TryAdd(name, referenceFile.FilePath!))
+                            {
+                                Logger.LogWarning($"Duplicate reference files for '{name}'.", code: "InvalidAssemblyReference");
+                            }
+                        }
                     }
+                    if (!referenceFiles.TryGetValue(reference.Name, out file))
+                    {
+                        // Skip warning for some weired assembly references: https://github.com/dotnet/docfx/issues/9459
+                        if (reference.Version?.ToString() != "0.0.0.0")
+                        {
+                            Logger.LogWarning($"Unable to resolve assembly reference {reference}", code: "InvalidAssemblyReference");
+                        }
 
-                    continue;
+                        continue;
+                    }
                 }
 
                 Logger.LogVerbose($"Loaded {reference.Name} from {file}");
 
-                using var referenceAssembly = new PEFile(file);
-                if (result.TryAdd(referenceAssembly.Name, file))
+                if (result.TryAdd(reference.Name, file))
                 {
+                    using var referenceAssembly = new PEFile(file);
                     GetReferenceAssembliesCore(referenceAssembly);
                 }
             }
@@ -201,7 +220,7 @@ internal static class CompilationHelper
         return result.Values;
     }
 
-    private static MetadataReference CreateMetadataReference(string assemblyPath)
+    internal static MetadataReference CreateMetadataReference(string assemblyPath)
     {
         var documentation = XmlDocumentationProvider.CreateFromFile(Path.ChangeExtension(assemblyPath, ".xml"));
         return MetadataReference.CreateFromFile(assemblyPath, documentation: documentation);
