@@ -1,0 +1,8 @@
+- name: Welcome
+  href: articles/
+- name: Project A
+  href: api/ProjectA
+  homepage: api/ProjectA/index.md
+- name: Project B
+  href: api/ProjectB
+  homepage: api/ProjectB/index.md

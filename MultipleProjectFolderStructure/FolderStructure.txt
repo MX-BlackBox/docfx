@@ -1,0 +1,11 @@
++-- doc
+⁞   +-- api
+⁞   ⁞   +-- ProjectA
+⁞   ⁞   ⁞   +-- index.md
+⁞   ⁞   +-- ProjectB
+⁞   ⁞       +-- index.md
+⁞   +-- docfx.json
+⁞   +-- toc.yml
++-- src
+    +-- ProjectA
+    +-- ProjectB
